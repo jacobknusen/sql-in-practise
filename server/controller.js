@@ -1,4 +1,14 @@
 let nextEmp = 5
+require('dotenv').config()
+let Sequelize = require('sequelize')
+const sequelize = new Sequelize(process.env.CONNECTION_STRING, {
+    dialect: 'postgres',
+    dialectOptions: {
+        ssl: {
+            rejectUnauthorized: false
+        }
+    }
+  })
 
 module.exports = {
     getUpcomingAppointments: (req, res) => {
@@ -27,5 +37,34 @@ module.exports = {
                 nextEmp += 2
             })
             .catch(err => console.log(err))
+    },
+
+    getAllClients: (req, res) => {
+        sequelize.query(`SELECT * from cc_users join cc_clients
+        ON cc_users.user_id = cc_clients.user_id`)
+        .then(dbRes => {
+            res.status(200).send(dbRes[0])
+        })
+
+        
+    },
+
+    getPendingAppointments: (req, res) => {
+        sequelize.query(`SELECT * FROM cc_appointments  WHERE approved = false ORDER BY date DESC `)
+        .then(dbRes => res.status(200).send(dbRes[0]))
+    },
+
+    getPastAppointments: (req, res) => {
+        sequelize.query(`SELECT a.appt_id, a.date, a.service_type, a.notes, u.first_name, u.last_name
+        from cc_appointments a 
+        join cc_emp_appts ea on a.appt_id = ea.appt_id
+        join cc_employees e on e.emp_id = ea.emp_id
+        join cc_users u on  u.user_id = e.user_id
+        where approved = true and  completed = true
+        order by date DESC
+        `)
+        .then(dbRes => res.status(200).send(dbRes[0]))
+
     }
 }
+ 
